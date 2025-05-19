@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hệ thống cảnh báo sạt lở</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header>
+    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+      <img src="img/logo.png" alt="Logo" class="logo">
+      <div>
+        <h1 style="font-size: 26px; margin: 0;">⚠️ Cảnh Báo Sạt Lở</h1>
+        <p style="margin: 0; margin: 10px auto 0 auto;">Giám Sát & Cảnh Báo Sạt Lở</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="status-box">
+    <div class="status-title" style="font-size: 24px;">🌱 Độ ẩm đất:</div>
+    <div class="status-value" id="doamdat-value">− − %&nbsp;<span style="color: green;">&nbsp;− −</span></div>
+  </div>
+
+  <div class="status-box">
+    <div class="status-title" style="font-size: 24px;">🌧️ Trạng thái mưa:</div>
+    <div class="status-value" style="color: red;"  id="status-rain">− −</div>
+  </div>
+
+  <div class="status-box">
+    <div class="status-title" style="font-size: 24px;">🌍 Rung chấn:</div>
+    <div class="status-value" style="color: red;"  id="status-rung">− −</div>
+  </div>
+
+  <!-- Bảng 2 cột: Đèn và Loa -->
+  <table>
+    <tr>
+      <td>
+        <img id="imgDen" src="img/denoff.png" alt="Đèn cảnh báo"><br>
+        <span class="upda">Đèn: <span id="status-den"> − −</span></span>
+      </td>
+      <td>
+        <img id="imgLoa" src="img/loabg.png" alt="Loa cảnh báo"><br>
+        <span class="upda">Loa: <span id="status-loa"> − −</span></span>
+      </td>
+    </tr>
+  </table>
+  <footer>
+    <p>© 2025 Landslide Warning System - DKKN</p>
+  </footer>
+
+  <!-- Cửa sổ cảnh báo sạt lở -->
+  <div id="popup-alert" style="display:none;" class="popup-overlay">
+    <div class="popup-content">
+      <h2>⚠️ Cảnh báo: Phát hiện nguy cơ sạt lở!</h2>
+      <p>Vui lòng kiểm tra khu vực được giám sát ngay lập tức để đảm bảo an toàn.</p>
+      <button onclick="closePopup()">Đã hiểu</button>
+    </div>
+  </div>
+
+  <!-- Kết nối Firebase -->
+  <!-- The core Firebase JS SDK is always required and must be listed first -->
+  <script src="https://www.gstatic.com/firebasejs/8.2.10/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.2.10/firebase-database.js"></script>
+  <!-- TODO: Add SDKs for Firebase products that you want to use
+       https://firebase.google.com/docs/web/setup#available-libraries -->
+  <script src="https://www.gstatic.com/firebasejs/8.2.10/firebase-analytics.js"></script>
+  
+  <script>
+    // Firebase cấu hình
+    const firebaseConfig = {
+      apiKey: "AIzaSyBRWy70tujjr_Nui31B8uqStwqH0qCst4M",
+      authDomain: "nhietdo3-18900.firebaseapp.com",
+      databaseURL: "https://nhietdo3-18900-default-rtdb.firebaseio.com",
+      projectId: "nhietdo3-18900",
+      storageBucket: "nhietdo3-18900.firebasestorage.app",
+      messagingSenderId: "180648951617",
+      appId: "1:180648951617:web:d3658cf4befc6c40b56bc0",
+      measurementId: "G-YEL0S96R9T"
+    };
+    // Khởi tạo Firebase
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+
+        // Lấy phần tử DOM
+    var doamdat = document.getElementById('doamdat-value');
+    var muasta = document.getElementById('status-rain');
+    var rungsta = document.getElementById('status-rung');
+    var densta = document.getElementById('status-den');
+    var loasta = document.getElementById('status-loa');
+    var canhbao = document.getElementById('status-canhbao');
+    
+    // Đọc dữ liệu từ Firebase  
+    var dbRef = firebase.database().ref("sensor_data/do_am_dat");
+
+    // Ghi nhận trạng thái các thiết bị từ Firebase và cập nhật giao diện
+
+    //  ĐỘ ẨM ĐẤT   ========================= 
+      dbRef.on('value', snap => {
+      const value = snap.val();
+      let danhGia = "";
+
+      if (value < 30) {
+        danhGia = "Đất khô";
+      } else if (value <= 70) {
+        danhGia = "Đất ướt";
+      } else {
+        danhGia = "Đất quá ướt";
+      }
+
+      doamdat.innerText = value + " % - " + danhGia;
+    });
+
+    //  RUNG   =========================
+    firebase.database().ref("sensor_data/rung").on('value', snapshot => {
+      const value = snapshot.val();
+      rungsta.innerText = value === 1 ? "Có rung" : "Bình thường";
+    });
+
+    //  MƯA   =========================
+    firebase.database().ref("sensor_data/mua").on('value', snapshot => {
+      const value = snapshot.val();
+      muasta.innerText = value === 1 ? "Có mưa" : "Không mưa";
+    });
+
+    //----- CẬP NHẬT TRẠNG THÁI THIẾT BỊ TỪ FIREBASE ------------------------------------
+    function updateUIFromFirebase(img, imgOnSrc, imgOffSrc, value, label) {
+      if (value === 1) {
+        img.src = imgOnSrc;
+        label.innerText = "Bật";
+        label.classList.remove('off');
+        label.classList.add('on');
+      } else {
+        img.src = imgOffSrc;
+        label.innerText = "Tắt";
+        label.classList.remove('on');
+        label.classList.add('off');
+      }
+    }
+
+
+    // ======== ĐÈN ========================
+    const imgDen = document.querySelector('img[alt="Đèn cảnh báo"]');
+    const txtDen = document.getElementById("status-den");
+
+    firebase.database().ref("thiet_bi/den").on('value', snapshot => {
+      const value = snapshot.val();
+      updateUIFromFirebase(imgDen, 'img/denon.png', 'img/denoff.png', value, txtDen);
+    });
+
+    // ======== LOA ========================
+    const imgLoa = document.querySelector('img[alt="Loa cảnh báo"]');
+    const txtLoa = document.getElementById("status-loa");
+
+    firebase.database().ref("thiet_bi/loa").on('value', snapshot => {
+      const value = snapshot.val();
+      updateUIFromFirebase(imgLoa, 'img/loaon.png', 'img/loaoff.png', value, txtLoa);
+    });
+
+    // === CẢNH BÁO SẠT LỞ ====================
+    firebase.database().ref("canh_bao").on('value', snapshot => {
+      const value = snapshot.val();
+      if (value === 1) {
+        showPopup();
+      }
+    });
+
+    function showPopup() {
+      document.getElementById('popup-alert').style.display = 'flex';
+    }
+
+    function closePopup() {
+      document.getElementById('popup-alert').style.display = 'none';
+    }
+
+    </script>
+</body>
+</html>
